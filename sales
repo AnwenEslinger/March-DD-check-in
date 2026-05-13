@@ -1,0 +1,118 @@
+Drop table  z00cp88.march2026_CW_sales;
+
+Create table z00cp88.march2026_CW_sales as 
+
+
+WITH loyaltytrans AS (
+    SELECT  
+        l.guest_profile_id, 
+        CASE 
+            WHEN fulfillment_type_n = 'STORE' AND transaction_id <> '-9999' THEN transaction_id
+            WHEN  customer_order_number <> '-9999' THEN customer_order_number
+        END AS transaction_id,
+        CASE 
+            WHEN fulfillment_type_n = 'STORE' AND transaction_id <> '-9999' THEN sale_d
+            WHEN  customer_order_number <> '-9999' THEN order_d
+        END AS sale_d
+    FROM prd_gdp_fnd.loyalty_sales_transaction l
+    INNER JOIN (
+        SELECT DISTINCT guest_profile_id 
+        FROM z00cp88.march2026_CW_acquisitions
+    ) a 
+        ON l.guest_profile_id = a.guest_profile_id 
+    WHERE sale_d BETWEEN '2026-02-01' AND '2026-05-02'
+  and transaction_type_n= 'SALE'
+),
+
+sales AS (
+    SELECT
+        origination_channel,
+        pm.promotion_id,
+        CASE 
+            WHEN (origination_channel = 'STORE' AND transaction_id <> '-9999') THEN transaction_id
+            WHEN (origination_channel = 'ONLINE' AND customer_order_number <> '-9999') THEN customer_order_number
+        END AS transaction_id,
+        CASE 
+            WHEN origination_channel = 'STORE' THEN sale_d
+            WHEN origination_channel = 'ONLINE' THEN order_d
+        END AS sale_d,
+        tcin,
+
+        CASE
+            WHEN origination_channel = 'STORE' THEN 'Store'
+            WHEN (origination_channel = 'ONLINE' AND fulfillment_type IN ('DIGITAL_DOWNLOAD','DIGITAL','SHIPTOHOME'))
+              OR (origination_channel = 'ONLINE' AND reporting_channel IN ('DVS','FC') AND fulfillment_type IS NULL)
+                THEN 'TargetCom Web'
+            WHEN (origination_channel = 'ONLINE' AND fulfillment_type IN ('SHIPTOSTORE','STOREPICKUP','STORE POS','-N/A-')
+                  AND fulfillment_ship_option <> 'CURBSIDE')
+                THEN 'Order Pickup'
+            WHEN (origination_channel = 'ONLINE' AND fulfillment_type = 'STOREPICKUP' 
+                  AND fulfillment_ship_option = 'CURBSIDE')
+                THEN 'DriveUp'
+            WHEN (origination_channel = 'ONLINE' AND fulfillment_type IN ('MEMBERSHIP_SHIPT','SHIPT','SCHEDULEDDELIVERY_SHIPT','TIP_SHIPT'))
+                THEN 'Shipt'
+            ELSE 'Other'
+        END AS ff_type,
+
+        guest_information_struct.guest_profile_id,
+
+        SUM(sale_q) AS sale_q,
+        SUM(extended_net_a) AS promo_sale,
+        SUM(-1 * pm.adjustment_amount) AS markdown
+
+    FROM prd_sls_fnd.sales_line_item
+    LATERAL VIEW explode(price_modifiers_arr) adj AS pm
+
+    WHERE transaction_type_c IN ('00', '01')
+      AND class_type_c NOT IN ('04', '05', '12', '13', '14')
+      AND origination_channel IN ('STORE','ONLINE')
+      AND sale_d BETWEEN '2026-02-01' AND '2026-05-02'
+      AND extended_net_a >= 0.00
+      AND sale_q > 0.00
+      AND guest_information_struct.guest_profile_id IS NOT NULL
+
+    GROUP BY
+        origination_channel,
+        pm.promotion_id, guest_information_struct.guest_profile_id,
+        CASE 
+            WHEN (origination_channel = 'STORE' AND transaction_id <> '-9999') THEN transaction_id
+            WHEN (origination_channel = 'ONLINE' AND customer_order_number <> '-9999') THEN customer_order_number
+        END,
+        CASE 
+            WHEN origination_channel = 'STORE' THEN sale_d
+            WHEN origination_channel = 'ONLINE' THEN order_d
+        END,
+        tcin,
+        CASE
+            WHEN origination_channel = 'STORE' THEN 'Store'
+            WHEN (origination_channel = 'ONLINE' AND fulfillment_type IN ('DIGITAL_DOWNLOAD','DIGITAL','SHIPTOHOME'))
+              OR (origination_channel = 'ONLINE' AND reporting_channel IN ('DVS','FC') AND fulfillment_type IS NULL)
+                THEN 'TargetCom Web'
+            WHEN (origination_channel = 'ONLINE' AND fulfillment_type IN ('SHIPTOSTORE','STOREPICKUP','STORE POS','-N/A-')
+                  AND fulfillment_ship_option <> 'CURBSIDE')
+                THEN 'Order Pickup'
+            WHEN (origination_channel = 'ONLINE' AND fulfillment_type = 'STOREPICKUP' 
+                  AND fulfillment_ship_option = 'CURBSIDE')
+                THEN 'DriveUp'
+            WHEN (origination_channel = 'ONLINE' AND fulfillment_type IN ('MEMBERSHIP_SHIPT','SHIPT','SCHEDULEDDELIVERY_SHIPT','TIP_SHIPT'))
+                THEN 'Shipt'
+            ELSE 'Other'
+        END 
+        
+)
+
+SELECT 
+    s.*,
+    CASE 
+        WHEN l.transaction_id IS NOT NULL THEN 'Y' 
+        ELSE 'N' 
+    END AS loyalty_flag, 
+  aqusition_group_time, promo_activity
+
+FROM sales s
+
+INNER JOIN  z00cp88.march2026_CW_acquisitions a 
+    ON s.guest_profile_id = a.guest_profile_id 
+
+LEFT JOIN loyaltytrans l 
+    ON s.transaction_id = l.transaction_id;
