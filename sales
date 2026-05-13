@@ -20,7 +20,7 @@ WITH loyaltytrans AS (
         FROM z00cp88.march2026_CW_acquisitions
     ) a 
         ON l.guest_profile_id = a.guest_profile_id 
-    WHERE sale_d BETWEEN '2026-02-01' AND '2026-05-02'
+    WHERE sale_d BETWEEN '2026-02-01' AND '2026-05-10'
   and transaction_type_n= 'SALE'
 ),
 
