@@ -1,0 +1,104 @@
+WITH cdd_flag AS (
+    SELECT 
+        s.*,
+
+        CASE 
+            WHEN sale_d BETWEEN DATE '2026-03-25' AND DATE '2026-03-27' 
+            THEN 1 ELSE 0 
+        END AS DD_flag,
+
+        CASE 
+            WHEN sale_d BETWEEN DATE '2026-03-15' AND DATE '2026-03-24' 
+            THEN 1 ELSE 0 
+        END AS promo_flag,
+
+        c.fiscal_week_end_d AS sale_week_end_d
+
+    FROM z00cp88.march2026_CW_sales s
+    LEFT JOIN prd_cal_fnd.calendar c 
+        ON s.sale_d = c.calendar_d
+),
+
+guests_dets AS (
+    SELECT 
+        guest_profile_id,
+        transaction_id,
+        sale_d, sale_week_end_d,
+        sum(promo_sale) as promo_sale,
+        sum(markdown) as markdown,
+        DD_flag,
+        promo_flag, 
+  loyalty_flag 
+    FROM cdd_flag
+
+  group by 
+  guest_profile_id, sale_week_end_d,
+        transaction_id,
+        sale_d,
+ DD_flag,
+        promo_flag, loyalty_flag
+),
+
+-- 🔑 collapse to ONE row per guest
+guest_summary AS (
+    SELECT 
+        guest_profile_id,
+sale_week_end_d,
+  
+        COUNT(DISTINCT transaction_id) AS txn,
+        SUM(promo_sale) AS sales,
+        SUM(markdown) as markdown,
+        count (distinct case when loyalty_flag = 'Y' then transaction_id end) as loyalty_txn,
+        sum(distinct case when loyalty_flag = 'Y' then promo_sale end) as loyalty_promo_sales,
+        sum(distinct case when loyalty_flag = 'Y' then markdown end) AS loyalty_markdown,
+       
+      
+
+       DD_flag, 
+      promo_flag
+
+    FROM guests_dets
+    GROUP BY guest_profile_id,sale_week_end_d, DD_flag, 
+      promo_flag
+),
+
+-- join cohort info
+final AS (
+    SELECT 
+        g.*,
+        a.aqusition_group_time,
+        a.loyalty_pillar_type_c, promo_activity,
+
+        CASE 
+            WHEN loyalty_pillar_type_c IN ('1','2') THEN 'base' 
+            WHEN loyalty_pillar_type_c IN ('3','4') THEN '360' 
+        END AS membership_type
+
+    FROM guest_summary g
+    LEFT JOIN z00cp88.march2026_CW_acquisitions a
+        ON g.guest_profile_id = a.guest_profile_id
+)
+
+
+SELECT  
+    aqusition_group_time, promo_activity,
+    membership_type, sale_week_end_d,
+
+    COUNT(distinct guest_profile_id) AS guests,
+    COUNT(distinct case when loyalty_txn  > 0 then guest_profile_id end) as loyalty_txn,
+        sum(txn) as txn,
+        SUM(sales) AS total_sales,
+        SUM(markdown) AS total_markdown,
+       
+        SUM(loyalty_txn) as loyalty_txn,
+        SUM(loyalty_promo_sales) as loyalty_sales,
+        SUM(loyalty_markdown) as loyalty_MKD
+
+FROM final
+
+GROUP BY sale_week_end_d,
+
+  aqusition_group_time, promo_activity,
+    membership_type
+
+ORDER BY aqusition_group_time, membership_type;
