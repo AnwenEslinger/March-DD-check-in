@@ -80,7 +80,7 @@ case when m.shipt_membership_id is not null then 'Y' else 'N' end as may_shipt_f
     m.last_store_transaction_d as may_last_store_transaction, 
     m.online_last_login_d AS may_logon_d, 
     m.application_last_login_d AS may_last_log_on,
-    
+    m.circle_360_membership_auto_renew_f as may_auto_renew,
     m.loyalty_pillar_type_n AS may_loyalty_type_n,
     m.circle_360_membership_price_paid_a AS may_price_paid, 
     m.circle_360_membership_recurrence_units as may_recurrence_units,
@@ -104,5 +104,3 @@ LEFT JOIN feb f
     ON a.guest_profile_id = f.guest_profile_id
 LEFT JOIN may m 
     ON a.guest_profile_id = m.guest_profile_id;
-
-
