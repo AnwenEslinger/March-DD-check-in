@@ -97,13 +97,27 @@ aprilcircle AS (
 
 april AS (
 
-    SELECT * FROM aprilcircle
+    SELECT
+        guest_profile_id,
+        guest_cluster_id,
+        fiscal_week_end_d,
+        loyalty_pillar_type_c,
+        acquisition_type
+    FROM aprilcircle
 
     UNION ALL
 
-    SELECT * FROM april360
+    SELECT
+        guest_profile_id,
+        guest_cluster_id,
+        fiscal_week_end_d,
+        loyalty_pillar_type_c,
+        acquisition_type
+    FROM april360
 
 ),
+
+
 
 feb AS (
 
@@ -224,6 +238,6 @@ SELECT COUNT(*) AS total_rows
 FROM z00cp88.march2026_CW_acquisitions
 ;
 
-SELECT COUNT(DISTINCT guest_profile_id) AS distinct_guests
+SELECT *
 FROM z00cp88.march2026_CW_acquisitions
 ;
