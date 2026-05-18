@@ -102,7 +102,12 @@ april AS (
         guest_cluster_id,
         fiscal_week_end_d,
         loyalty_pillar_type_c,
-        acquisition_type
+        acquisition_type, 
+        guest_segment, 
+      previous_status_n,
+  circle360_membership_current_start_d as start_d,
+circle_360_membership_cancellation_d,
+circle_360_membership_auto_renew_f
     FROM aprilcircle
 
     UNION ALL
@@ -112,7 +117,12 @@ april AS (
         guest_cluster_id,
         fiscal_week_end_d,
         loyalty_pillar_type_c,
-        acquisition_type
+        acquisition_type, guest_segment, 
+  previous_status_n,
+   fully_enrolled_d as start_d,
+circle_360_membership_cancellation_d,
+circle_360_membership_auto_renew_f
+  
     FROM april360
 
 ),
