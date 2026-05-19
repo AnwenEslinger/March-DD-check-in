@@ -4,10 +4,13 @@ CREATE TABLE z00cp88.march2026_CW_acquisitions AS
 
 WITH basics AS (
 
-    SELECT DISTINCT guest_profile_id
+    SELECT DISTINCT
+        guest_profile_id
+
     FROM prd_gdp_fnd.loyalty_offer_activity
+
     WHERE offer_id IN ('961870332','291215041','696713646')
-      AND activity_d > '2026-02-28'
+      AND activity_d > DATE('2026-02-28')
       AND offer_activity_type_n = 'BENEFIT_REDEEMED'
 
 ),
@@ -15,10 +18,12 @@ WITH basics AS (
 april3601 AS (
 
     SELECT *
+
     FROM prd_gdp_fnd.loyalty_profile_weekly_aggregate
-    WHERE circle360_membership_current_start_d 
-          BETWEEN '2026-03-01' AND '2026-04-04'
-      AND fiscal_week_end_d = '2026-04-04'
+
+    WHERE circle360_membership_current_start_d
+            BETWEEN DATE('2026-03-01') AND DATE('2026-04-04')
+      AND fiscal_week_end_d = DATE('2026-04-04')
       AND circle_360_membership_type != 'Trial'
       AND loyalty_pillar_type_c IN ('3','4')
 
@@ -26,29 +31,30 @@ april3601 AS (
 
 april360 AS (
 
-    SELECT 
+    SELECT
         a.*,
 
         CASE
-            WHEN a.circle360_membership_current_start_d 
-                    BETWEEN '2026-03-15' AND '2026-03-27'
+            WHEN a.circle360_membership_current_start_d
+                    BETWEEN DATE('2026-03-15') AND DATE('2026-03-27')
                  AND b.guest_profile_id IS NOT NULL
                 THEN '360_promo'
 
-            WHEN a.circle360_membership_current_start_d 
-                    BETWEEN '2026-03-15' AND '2026-03-27'
+            WHEN a.circle360_membership_current_start_d
+                    BETWEEN DATE('2026-03-15') AND DATE('2026-03-27')
                  AND b.guest_profile_id IS NULL
                 THEN '360_no_promo'
 
-            WHEN a.circle360_membership_current_start_d < '2026-03-15'
+            WHEN a.circle360_membership_current_start_d < DATE('2026-03-15')
                 THEN 'Pre-promo'
 
-            WHEN a.circle360_membership_current_start_d > '2026-03-27'
+            WHEN a.circle360_membership_current_start_d > DATE('2026-03-27')
                 THEN 'Post-promo'
 
         END AS acquisition_type
 
     FROM april3601 a
+
     LEFT JOIN basics b
         ON a.guest_profile_id = b.guest_profile_id
 
@@ -57,39 +63,42 @@ april360 AS (
 aprilcircle1 AS (
 
     SELECT *
+
     FROM prd_gdp_fnd.loyalty_profile_weekly_aggregate
-    WHERE fully_enrolled_d 
-          BETWEEN '2026-03-01' AND '2026-04-04'
-      AND fiscal_week_end_d = '2026-04-04'
+
+    WHERE fully_enrolled_d
+            BETWEEN DATE('2026-03-01') AND DATE('2026-04-04')
+      AND fiscal_week_end_d = DATE('2026-04-04')
       AND loyalty_pillar_type_c IN ('1','2')
 
 ),
 
 aprilcircle AS (
 
-    SELECT 
+    SELECT
         a.*,
 
         CASE
-            WHEN a.fully_enrolled_d 
-                    BETWEEN '2026-03-15' AND '2026-03-24'
+            WHEN a.fully_enrolled_d
+                    BETWEEN DATE('2026-03-15') AND DATE('2026-03-24')
                  AND b.guest_profile_id IS NOT NULL
                 THEN 'base_promo'
 
-            WHEN a.fully_enrolled_d 
-                    BETWEEN '2026-03-15' AND '2026-03-24'
+            WHEN a.fully_enrolled_d
+                    BETWEEN DATE('2026-03-15') AND DATE('2026-03-24')
                  AND b.guest_profile_id IS NULL
                 THEN 'base_no_promo'
 
-            WHEN a.fully_enrolled_d < '2026-03-15'
+            WHEN a.fully_enrolled_d < DATE('2026-03-15')
                 THEN 'Pre-promo'
 
-            WHEN a.fully_enrolled_d > '2026-03-24'
+            WHEN a.fully_enrolled_d > DATE('2026-03-24')
                 THEN 'Post-promo'
 
         END AS acquisition_type
 
     FROM aprilcircle1 a
+
     LEFT JOIN basics b
         ON a.guest_profile_id = b.guest_profile_id
 
@@ -102,12 +111,28 @@ april AS (
         guest_cluster_id,
         fiscal_week_end_d,
         loyalty_pillar_type_c,
-        acquisition_type, 
-        guest_segment, 
-      previous_status_n,
-  circle360_membership_current_start_d as start_d,
-circle_360_membership_cancellation_d,
-circle_360_membership_auto_renew_f
+        loyalty_pillar_type_n,
+        acquisition_type,
+        guest_segment,
+        previous_status_n,
+        fully_enrolled_d AS start_d,
+        circle_360_membership_cancellation_d,
+        circle_360_membership_auto_renew_f,
+        earnings_current_balance_a,
+        votes_current_balance_q,
+        is_circle_guest_active_3_months_f,
+        is_circle_sameday_active_3_months_f,
+        is_circle_redcard_active_3_months_f,
+        is_circle_offer_redeemed_3_months_f,
+        circle_offer_redeemed_3_months_q,
+        last_online_transaction_d,
+        last_drive_up_d,
+        last_store_transaction_d,
+        online_last_login_d,
+        application_last_login_d,
+        circle_360_membership_price_paid_a,
+        circle_360_membership_recurrence_units
+
     FROM aprilcircle
 
     UNION ALL
@@ -117,28 +142,43 @@ circle_360_membership_auto_renew_f
         guest_cluster_id,
         fiscal_week_end_d,
         loyalty_pillar_type_c,
-        acquisition_type, guest_segment, 
-  previous_status_n,
-   fully_enrolled_d as start_d,
-circle_360_membership_cancellation_d,
-circle_360_membership_auto_renew_f
-  
+        loyalty_pillar_type_n,
+        acquisition_type,
+        guest_segment,
+        previous_status_n,
+        circle360_membership_current_start_d AS start_d,
+        circle_360_membership_cancellation_d,
+        circle_360_membership_auto_renew_f,
+        earnings_current_balance_a,
+        votes_current_balance_q,
+        is_circle_guest_active_3_months_f,
+        is_circle_sameday_active_3_months_f,
+        is_circle_redcard_active_3_months_f,
+        is_circle_offer_redeemed_3_months_f,
+        circle_offer_redeemed_3_months_q,
+        last_online_transaction_d,
+        last_drive_up_d,
+        last_store_transaction_d,
+        online_last_login_d,
+        application_last_login_d,
+        circle_360_membership_price_paid_a,
+        circle_360_membership_recurrence_units
+
     FROM april360
 
 ),
 
-
-
 feb AS (
 
     SELECT *
+
     FROM (
 
-        SELECT 
+        SELECT
             m.*,
 
             ROW_NUMBER() OVER (
-                PARTITION BY m.guest_profile_id
+                PARTITION BY m.guest_cluster_id
                 ORDER BY m.fiscal_week_end_d DESC
             ) AS rn
 
@@ -150,7 +190,7 @@ feb AS (
         ) a
             ON a.guest_cluster_id = m.guest_cluster_id
 
-        WHERE m.fiscal_week_end_d = '2026-01-31'
+        WHERE m.fiscal_week_end_d = DATE('2026-01-31')
 
     ) x
 
@@ -161,13 +201,14 @@ feb AS (
 may AS (
 
     SELECT *
+
     FROM (
 
-        SELECT 
+        SELECT
             m.*,
 
             ROW_NUMBER() OVER (
-                PARTITION BY m.guest_profile_id
+                PARTITION BY m.guest_cluster_id
                 ORDER BY m.fiscal_week_end_d DESC
             ) AS rn
 
@@ -179,7 +220,7 @@ may AS (
         ) a
             ON a.guest_cluster_id = m.guest_cluster_id
 
-        WHERE m.fiscal_week_end_d = '2026-05-02'
+        WHERE m.fiscal_week_end_d = DATE('2026-05-02')
 
     ) x
 
@@ -191,8 +232,12 @@ SELECT
 
     a.*,
 
-    -- Feb fields
-    CASE WHEN f.shipt_membership_id IS NOT NULL THEN 'Y' ELSE 'N' END AS feb_shipt_f,
+    -- February snapshot
+    CASE
+        WHEN f.shipt_membership_id IS NOT NULL THEN 'Y'
+        ELSE 'N'
+    END AS feb_shipt_f,
+
     f.account_status_n AS feb_account_status,
     f.earnings_current_balance_a AS feb_earnings_balance,
     f.votes_current_balance_q AS feb_votes_balance,
@@ -211,8 +256,12 @@ SELECT
     f.circle_360_membership_price_paid_a AS feb_price_paid,
     f.circle_360_membership_recurrence_units AS feb_recurrence_units,
 
-    -- May fields
-    CASE WHEN m.shipt_membership_id IS NOT NULL THEN 'Y' ELSE 'N' END AS may_shipt_f,
+    -- May snapshot
+    CASE
+        WHEN m.shipt_membership_id IS NOT NULL THEN 'Y'
+        ELSE 'N'
+    END AS may_shipt_f,
+
     m.account_status_n AS may_account_status,
     m.earnings_current_balance_a AS may_earnings_balance,
     m.votes_current_balance_q AS may_votes_balance,
@@ -236,10 +285,10 @@ SELECT
 FROM april a
 
 LEFT JOIN feb f
-    ON a.guest_profile_id = f.guest_profile_id
+    ON a.guest_cluster_id = f.guest_cluster_id
 
 LEFT JOIN may m
-    ON a.guest_profile_id = m.guest_profile_id
+    ON a.guest_cluster_id = m.guest_cluster_id
 ;
 
 -- Validation checks
@@ -248,6 +297,6 @@ SELECT COUNT(*) AS total_rows
 FROM z00cp88.march2026_CW_acquisitions
 ;
 
-SELECT *
+SELECT COUNT(DISTINCT guest_profile_id) AS distinct_guests
 FROM z00cp88.march2026_CW_acquisitions
 ;
