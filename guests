@@ -189,3 +189,9 @@ FROM april a
 LEFT JOIN may m
     ON a.guest_profile_id = m.guest_profile_id
 ;
+SELECT COUNT(*) AS total_rows
+FROM z00cp88.march2026_CW_acquisitions
+;
+
+SELECT COUNT(DISTINCT guest_profile_id) AS distinct_guests
+FROM z00cp88.march2026_CW_acquisitions
