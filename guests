@@ -107,96 +107,20 @@ aprilcircle AS (
 april AS (
 
     SELECT
-        guest_profile_id,
-        guest_cluster_id,
-        fiscal_week_end_d,
-        loyalty_pillar_type_c,
-        loyalty_pillar_type_n,
-        acquisition_type,
-        guest_segment,
-        previous_status_n,
-        fully_enrolled_d AS start_d,
-        circle_360_membership_cancellation_d,
-        circle_360_membership_auto_renew_f,
-        earnings_current_balance_a,
-        votes_current_balance_q,
-        is_circle_guest_active_3_months_f,
-        is_circle_sameday_active_3_months_f,
-        is_circle_redcard_active_3_months_f,
-        is_circle_offer_redeemed_3_months_f,
-        circle_offer_redeemed_3_months_q,
-        last_online_transaction_d,
-        last_drive_up_d,
-        last_store_transaction_d,
-        online_last_login_d,
-        application_last_login_d,
-        circle_360_membership_price_paid_a,
-        circle_360_membership_recurrence_units
+       a.*
 
-    FROM aprilcircle
+    FROM aprilcircle a
 
     UNION ALL
 
     SELECT
-        guest_profile_id,
-        guest_cluster_id,
-        fiscal_week_end_d,
-        loyalty_pillar_type_c,
-        loyalty_pillar_type_n,
-        acquisition_type,
-        guest_segment,
-        previous_status_n,
-        circle360_membership_current_start_d AS start_d,
-        circle_360_membership_cancellation_d,
-        circle_360_membership_auto_renew_f,
-        earnings_current_balance_a,
-        votes_current_balance_q,
-        is_circle_guest_active_3_months_f,
-        is_circle_sameday_active_3_months_f,
-        is_circle_redcard_active_3_months_f,
-        is_circle_offer_redeemed_3_months_f,
-        circle_offer_redeemed_3_months_q,
-        last_online_transaction_d,
-        last_drive_up_d,
-        last_store_transaction_d,
-        online_last_login_d,
-        application_last_login_d,
-        circle_360_membership_price_paid_a,
-        circle_360_membership_recurrence_units
+        b.*
 
-    FROM april360
+    FROM april360 b
 
 ),
 
-feb AS (
 
-    SELECT *
-
-    FROM (
-
-        SELECT
-            m.*,
-
-            ROW_NUMBER() OVER (
-                PARTITION BY m.guest_cluster_id
-                ORDER BY m.fiscal_week_end_d DESC
-            ) AS rn
-
-        FROM prd_gdp_fnd.loyalty_profile_weekly_aggregate m
-
-        INNER JOIN (
-            SELECT DISTINCT guest_cluster_id
-            FROM april
-        ) a
-            ON a.guest_cluster_id = m.guest_cluster_id
-
-        WHERE m.fiscal_week_end_d = DATE('2026-01-31')
-
-    ) x
-
-    WHERE rn = 1
-
-),
 
 may AS (
 
@@ -208,17 +132,17 @@ may AS (
             m.*,
 
             ROW_NUMBER() OVER (
-                PARTITION BY m.guest_cluster_id
+                PARTITION BY m.guest_profile_id
                 ORDER BY m.fiscal_week_end_d DESC
             ) AS rn
 
         FROM prd_gdp_fnd.loyalty_profile_weekly_aggregate m
 
         INNER JOIN (
-            SELECT DISTINCT guest_cluster_id
+            SELECT DISTINCT guest_profile_id
             FROM april
         ) a
-            ON a.guest_cluster_id = m.guest_cluster_id
+            ON a.guest_profile_id = m.guest_profile_id
 
         WHERE m.fiscal_week_end_d = DATE('2026-05-02')
 
@@ -232,30 +156,7 @@ SELECT
 
     a.*,
 
-    -- February snapshot
-    CASE
-        WHEN f.shipt_membership_id IS NOT NULL THEN 'Y'
-        ELSE 'N'
-    END AS feb_shipt_f,
-
-    f.account_status_n AS feb_account_status,
-    f.earnings_current_balance_a AS feb_earnings_balance,
-    f.votes_current_balance_q AS feb_votes_balance,
-    f.guest_segment AS feb_segment,
-    f.is_circle_guest_active_3_months_f AS feb_circle_active_3_months_f,
-    f.is_circle_sameday_active_3_months_f AS feb_circle_sameday_active_3_months_f,
-    f.is_circle_redcard_active_3_months_f AS feb_circle_redcard_active_3_months_f,
-    f.is_circle_offer_redeemed_3_months_f AS feb_circle_offer_redeemed_3_months_f,
-    f.circle_offer_redeemed_3_months_q AS feb_circle_offer_redeemed_3_months_q,
-    f.last_online_transaction_d AS feb_last_online_transaction_d,
-    f.last_drive_up_d AS feb_last_drive_up,
-    f.last_store_transaction_d AS feb_last_store_transaction,
-    f.online_last_login_d AS feb_logon_d,
-    f.application_last_login_d AS feb_last_log_on,
-    f.loyalty_pillar_type_n AS feb_loyalty_type_n,
-    f.circle_360_membership_price_paid_a AS feb_price_paid,
-    f.circle_360_membership_recurrence_units AS feb_recurrence_units,
-
+   
     -- May snapshot
     CASE
         WHEN m.shipt_membership_id IS NOT NULL THEN 'Y'
@@ -284,19 +185,7 @@ SELECT
 
 FROM april a
 
-LEFT JOIN feb f
-    ON a.guest_cluster_id = f.guest_cluster_id
 
 LEFT JOIN may m
-    ON a.guest_cluster_id = m.guest_cluster_id
-;
-
--- Validation checks
-
-SELECT COUNT(*) AS total_rows
-FROM z00cp88.march2026_CW_acquisitions
-;
-
-SELECT COUNT(DISTINCT guest_profile_id) AS distinct_guests
-FROM z00cp88.march2026_CW_acquisitions
+    ON a.guest_profile_id = m.guest_profile_id
 ;
